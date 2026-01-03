@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Campus WiFi Dashboard</title>
+  <style>
+    body { font-family: Arial; background:#f5f5f5; }
+    h2 { text-align:center; }
+    #map { width:900px; height:500px; margin:20px auto; border:2px solid #333; }
+    #alerts { width:900px; margin:auto; background:white; padding:10px; border:1px solid #ccc; }
+  </style>
+</head>
+<body>
+
+<h2>📊 Campus WiFi Dashboard (Google Maps MVP)</h2>
+<div id="map"></div>
+
+<div id="alerts">
+  <h3>⚠️ Live Alerts</h3>
+  <ul id="alertList"></ul>
+</div>
+
+<!-- Google Maps JS API (replace YOUR_API_KEY with real key) -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDFy66Dgr0GTcJyg84MAZkaFsj82wyfEl8&libraries=visualization"></script>
+<script>
+let map;
+let heatmap;
+let devices = [];
+
+// Generate 15 simulated students
+for(let i=0;i<15;i++){
+  devices.push({
+    id:100+i,
+    lat: 17.3850 + Math.random()/100,
+    lng: 78.4867 + Math.random()/100,
+    rssi: -40 - Math.floor(Math.random()*60)
+  });
+}
+
+// Add 5 fixed poor WiFi locations (to highlight specific areas)
+let poorLocations = [
+  {name: "Library", lat:17.3865, lng:78.4875},
+  {name: "Cafeteria", lat:17.3840, lng:78.4880},
+  {name: "Parking Lot", lat:17.3830, lng:78.4855},
+  {name: "Gym", lat:17.3870, lng:78.4840},
+  {name: "Auditorium", lat:17.3825, lng:78.4865}
+];
+
+function getStatus(rssi){
+  if(rssi < -80) return "poor";
+  if(rssi < -65) return "avg";
+  return "good";
+}
+
+function initMap(){
+  map = new google.maps.Map(document.getElementById('map'), {
+    zoom: 16,
+    center: {lat: 17.3850, lng: 78.4867}
+  });
+
+  // Add markers for fixed poor WiFi spots
+  poorLocations.forEach(loc=>{
+    const marker = new google.maps.Marker({
+      position: {lat: loc.lat, lng: loc.lng},
+      map: map,
+      title: loc.name + " – Poor WiFi",
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "red", fillOpacity: 0.8, strokeWeight: 1 }
+    });
+  });
+
+  updateHeatmap();
+  setInterval(simulateUpdates, 2000);
+}
+
+function updateHeatmap(){
+  const points = devices.map(d => new google.maps.LatLng(d.lat, d.lng));
+  if(heatmap) heatmap.setMap(null); // remove old heatmap
+  heatmap = new google.maps.visualization.HeatmapLayer({
+    data: points,
+    map: map,
+    radius: 30
+  });
+
+  // Update alerts
+  const alertList = document.getElementById('alertList');
+  alertList.innerHTML = "";
+
+  // Add dynamic device alerts
+  devices.forEach(d=>{
+    const status = getStatus(d.rssi);
+    if(status === "poor"){
+      const li = document.createElement("li");
+      li.innerText = `Poor WiFi near Student ${d.id} (RSSI ${d.rssi})`;
+      alertList.appendChild(li);
+    }
+  });
+
+  // Add fixed poor WiFi locations alerts
+  poorLocations.forEach(loc=>{
+    const li = document.createElement("li");
+    li.innerText = `Poor WiFi at ${loc.name}`;
+    alertList.appendChild(li);
+  });
+}
+
+// Simulate live changes in RSSI + small position shifts
+function simulateUpdates(){
+  devices.forEach(d=>{
+    d.rssi += Math.floor(Math.random()*11-5);
+    d.rssi = Math.max(-95, Math.min(-40, d.rssi));
+    d.lat += (Math.random()-0.5)/1000;
+    d.lng += (Math.random()-0.5)/1000;
+  });
+  updateHeatmap();
+}
+
+window.onload = initMap;
+</script>
+</body>
+</html>
+
+
+
